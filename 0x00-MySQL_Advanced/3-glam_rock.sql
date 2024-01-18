@@ -8,5 +8,5 @@ SELECT
         ELSE 2022 - formed
     END AS lifespan
 FROM metal_bands
-WHERE main_style = 'Glam rock'
+WHERE FIND_IN_SET = 'Glam rock'
 ORDER BY lifespan DESC, band_name;
