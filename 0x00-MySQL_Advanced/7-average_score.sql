@@ -11,8 +11,8 @@ BEGIN
 
     -- Compute the total score and the total number of projects
     SELECT
-        COALESCE(SUM(score), 0) INTO total_score,
-        COALESCE(COUNT(DISTINCT project_id), 1) INTO total_projects
+        SUM(score), 0) INTO total_score,
+        COUNT(DISTINCT project_id), 1) INTO total_projects
     FROM corrections
     WHERE user_id = user_id;
 
