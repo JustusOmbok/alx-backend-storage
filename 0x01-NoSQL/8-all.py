@@ -12,5 +12,4 @@ def list_all(mongo_collection):
     Returns:
         List[dict]: A list containing all documents in the collection.
     """
-    documents = (doc for docs in mongo_collection.find())
-    return documents
+    return [doc for docs in mongo_collection.find()]
