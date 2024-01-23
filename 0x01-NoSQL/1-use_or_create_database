@@ -1,0 +1,2 @@
+// Use or create my_db as the databases
+use my_db;
