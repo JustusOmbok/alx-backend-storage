@@ -9,11 +9,10 @@ def list_all(mongo_collection: Collection) -> List[dict]:
     Lists all documents in a MongoDB collection.
 
     Args:
-        mongo_collection (pymongo.collection.Collection): The pymongo collection object.
+        mongo_collection: The pymongo collection object.
 
     Returns:
         List[dict]: A list containing all documents in the collection.
     """
     documents = list(mongo_collection.find())
     return documents
-
