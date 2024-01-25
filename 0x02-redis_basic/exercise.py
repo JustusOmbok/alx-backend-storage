@@ -8,7 +8,7 @@ from typing import Any, Callable, Union
 
 
 def count_calls(method: Callable) -> Callable:
-    '''Decorator to track the number of calls made to a method in a Cache class.
+    '''Decorator to track the number of calls made to a method.
 
     Args:
         method (Callable): The method to be decorated.
@@ -59,18 +59,18 @@ def call_history(method: Callable) -> Callable:
         # Define input and output Redis keys
         in_key = '{}:inputs'.format(method.__qualname__)
         out_key = '{}:outputs'.format(method.__qualname__)
-        
+
         # Store input arguments in Redis
         if isinstance(self._redis, redis.Redis):
             self._redis.rpush(in_key, str(args))
-        
+
         # Execute the wrapped function to retrieve the output
         output = method(self, *args, **kwargs)
-        
+
         # Store the output in Redis
         if isinstance(self._redis, redis.Redis):
             self._redis.rpush(out_key, output)
-        
+
         return output
     return wrapper
 
@@ -86,24 +86,24 @@ def replay(fn: Callable) -> None:
     redis_store = getattr(fn.__self__, '_redis', None)
     if not isinstance(redis_store, redis.Redis):
         return
-    
+
     # Get the function name and keys
     fxn_name = fn.__qualname__
     in_key = '{}:inputs'.format(fxn_name)
     out_key = '{}:outputs'.format(fxn_name)
-    
+
     # Get the function call count from Redis
     fxn_call_count = 0
     if redis_store.exists(fxn_name) != 0:
         fxn_call_count = int(redis_store.get(fxn_name))
-    
+
     # Print the call count information
     print('{} was called {} times:'.format(fxn_name, fxn_call_count))
-    
+
     # Get the inputs and outputs lists from Redis
     fxn_inputs = redis_store.lrange(in_key, 0, -1)
     fxn_outputs = redis_store.lrange(out_key, 0, -1)
-    
+
     # Print each function call with inputs and output
     for fxn_input, fxn_output in zip(fxn_inputs, fxn_outputs):
         print('{}(*{}) -> {}'.format(
@@ -179,4 +179,3 @@ class Cache:
             int: The retrieved integer or None if the key does not exist.
         '''
         return self.get(key, lambda x: int(x))
-
