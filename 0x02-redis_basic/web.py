@@ -84,3 +84,31 @@ def get_page(url: str) -> str:
     """
     response = requests.get(url)
     return response.text
+
+def main() -> None:
+    """
+    Main function to demonstrate the usage of the get_page function with caching and access tracking.
+    """
+    # Initialize the Redis client
+    get_page._redis = redis.Redis()
+
+    # Example usage
+    url = "http://slowwly.robertomurray.co.uk/delay/1000/url/http://www.google.com"
+    
+    # Access the URL (this will be slow due to the simulated delay)
+    content = get_page(url)
+    print(content)
+
+    # Access the URL again (this time it should be cached)
+    content = get_page(url)
+    print(content)
+
+    # Wait for more than 10 seconds to expire the cache
+    time.sleep(11)
+
+    # Access the URL after cache expiration (this will fetch the content again)
+    content = get_page(url)
+    print(content)
+
+if __name__ == "__main__":
+    main()
