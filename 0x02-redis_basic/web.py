@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-
+"""Module for task.
+"""
 import requests
 import redis
 import time
 from functools import wraps
-from typing import Callable
+from typing import Callable, Any, Union
+
 
 def count_accesses(method: Callable) -> Callable:
     """
@@ -19,7 +21,7 @@ def count_accesses(method: Callable) -> Callable:
     @wraps(method)
     def wrapper(url: str, *args, **kwargs) -> str:
         """
-        Increments the access count for the given URL and invokes the decorated method.
+        Increments the access count for the given URL.
 
         Args:
             url (str): The URL being accessed.
@@ -34,9 +36,10 @@ def count_accesses(method: Callable) -> Callable:
         return method(url, *args, **kwargs)
     return wrapper
 
+
 def cache_result(expiration_time: int) -> Callable:
     """
-    Decorator to cache the result of a method with a specified expiration time.
+    Decorator to cache the result of a method.
 
     Args:
         expiration_time (int): The expiration time for caching in seconds.
@@ -48,7 +51,8 @@ def cache_result(expiration_time: int) -> Callable:
         @wraps(method)
         def wrapper(url: str, *args, **kwargs) -> str:
             """
-            Checks if the result is cached and returns it, or invokes the decorated method
+            Checks if the result is cached and returns it,
+            or invokes the decorated method
             and caches the result with the specified expiration time.
 
             Args:
@@ -63,12 +67,13 @@ def cache_result(expiration_time: int) -> Callable:
             cached_result = method._redis.get(result_key)
             if cached_result is not None:
                 return cached_result.decode('utf-8')
-            
+
             result = method(url, *args, **kwargs)
             method._redis.setex(result_key, expiration_time, result)
             return result
         return wrapper
     return decorator
+
 
 @count_accesses
 @cache_result(10)
@@ -85,30 +90,36 @@ def get_page(url: str) -> str:
     response = requests.get(url)
     return response.text
 
-def main() -> None:
+
+def replay(fn: Callable) -> None:
     """
-    Main function to demonstrate the usage of the get_page function with caching and access tracking.
+    Displays the call history of a method.
+
+    Args:
+        fn (Callable): The method to display the call history for.
     """
-    # Initialize the Redis client
-    get_page._redis = redis.Redis()
+    if fn is None or not hasattr(fn, '__self__'):
+        return
+    redis_store = getattr(fn.__self__, '_redis', None)
+    if not isinstance(redis_store, redis.Redis):
+        return
 
-    # Example usage
-    url = "http://slowwly.robertomurray.co.uk/delay/1000/url/http://www.google.com"
-    
-    # Access the URL (this will be slow due to the simulated delay)
-    content = get_page(url)
-    print(content)
+    fxn_name = fn.__qualname__
+    in_key = '{}:inputs'.format(fxn_name)
+    out_key = '{}:outputs'.format(fxn_name)
 
-    # Access the URL again (this time it should be cached)
-    content = get_page(url)
-    print(content)
+    fxn_call_count = 0
+    if redis_store.exists(fxn_name) != 0:
+        fxn_call_count = int(redis_store.get(fxn_name))
 
-    # Wait for more than 10 seconds to expire the cache
-    time.sleep(11)
+    print('{} was called {} times:'.format(fxn_name, fxn_call_count))
 
-    # Access the URL after cache expiration (this will fetch the content again)
-    content = get_page(url)
-    print(content)
+    fxn_inputs = redis_store.lrange(in_key, 0, -1)
+    fxn_outputs = redis_store.lrange(out_key, 0, -1)
 
-if __name__ == "__main__":
-    main()
+    for fxn_input, fxn_output in zip(fxn_inputs, fxn_outputs):
+        print('{}(*{}) -> {}'.format(
+            fxn_name,
+            fxn_input.decode("utf-8"),
+            fxn_output,
+        ))
